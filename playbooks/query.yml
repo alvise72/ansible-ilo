@@ -1,0 +1,215 @@
+---
+- name: Query ILO information
+  hosts: all
+  gather_facts: false
+  vars:
+    - nolog: false
+  tasks:
+    - name: Execute URI module to get iLO/BIOS info
+      uri:
+        url: 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/'
+        method: GET
+        return_content: yes
+        url_username: '{{ username }}'
+        url_password: '{{ password }}'
+        validate_certs: false
+        status_code: 200
+        use_proxy: false
+        force_basic_auth: true
+      register: query
+      delegate_to: localhost
+      no_log: '{{ nolog }}'
+      changed_when: false
+
+    - debug:
+        msg: '{{ query }}'
+      when: debugquery is defined
+           
+    - name: Execute URI module to get Ethernet interfaces info
+      uri:
+        url: 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/EthernetInterfaces/'
+        method: GET
+        return_content: yes
+        url_username: '{{ username }}'
+        url_password: '{{ password }}'
+        validate_certs: false
+        status_code: 200
+        use_proxy: false
+        force_basic_auth: true
+      register: queryethnum
+      delegate_to: localhost
+      no_log: '{{ nolog }}'
+      changed_when: false
+
+#    - debug:
+#      when: debugquery is defined
+#        msg: '{{ queryethnum }}'
+
+    - name: ILO5 set facts
+      set_fact: 
+        ilover: 5
+        HP: 'Hpe'
+      when: query.odata_version is defined
+      no_log: '{{ nolog }}'
+      changed_when: false
+            
+    - name: ILO4 set facts
+      set_fact: 
+        ilover: 4
+        HP: 'Hp'
+      when: query.odata_version is not defined
+      no_log: '{{ nolog }}'
+      changed_when: false
+      
+    - name: ETH set facts
+      set_fact:
+        num_interfaces: '{{ queryethnum.json.Members|length }}'
+      no_log: '{{ nolog }}'
+      changed_when: false
+
+    - name: Retrieve Ethernet info
+      uri:
+        url: 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/EthernetInterfaces/{{ item }}/'
+        method: GET
+        return_content: yes
+        url_username: '{{ username }}'
+        url_password: '{{ password }}'
+        validate_certs: false
+        status_code: 200
+        use_proxy: false
+        force_basic_auth: true
+      register: queryeths
+      delegate_to: localhost
+      loop: "{{ range(1, 1 + num_interfaces|int, 1)|list }}"
+      no_log: '{{ nolog }}'
+      changed_when: false
+
+    - set_fact:
+        NIC: []
+        MAC4: []
+        MAC5: []
+      no_log: '{{ nolog }}'
+      changed_when: false
+
+    - name: Set NIC array
+      set_fact:
+        NIC: '{{ NIC + [item.json] }}'
+      loop: "{{ queryeths.results }}"
+      no_log: '{{ nolog }}'
+      changed_when: false
+
+    - name: Set MAC array
+      set_fact:
+        MAC4: '{{ MAC4 + [item.MacAddress|default("")] }}'
+        MAC5: '{{ MAC5 + [item.MACAddress|default("")] }}'
+      loop: '{{ NIC }}'
+      no_log: '{{ nolog }}'
+      changed_when: false
+
+    - set_fact:
+        mac5: "{{ MAC5|select('match', '[^$]')|list }}"
+        mac4: "{{ MAC4|select('match', '[^$]')|list }}"
+      no_log: '{{ nolog }}'
+      changed_when: false
+      
+    - name: Retrieve Processor info
+      uri:
+        url: 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/Processors/1/'
+        method: GET
+        return_content: yes
+        url_username: '{{ username }}'
+        url_password: '{{ password }}'
+        validate_certs: false
+        status_code: 200
+        use_proxy: false
+        force_basic_auth: true
+      register: queryprocs
+      delegate_to: localhost
+      no_log: '{{ nolog }}'
+      changed_when: false
+    
+    - set_fact:
+        L1: '{{ queryprocs.json.Oem.Hp.Cache[0].MaximumSizeKB }}'
+        L2: '{{ queryprocs.json.Oem.Hp.Cache[1].MaximumSizeKB }}'
+        L3: '{{ queryprocs.json.Oem.Hp.Cache[2].MaximumSizeKB }}'
+        ecores: '{{ queryprocs.json.Oem.Hp.CoresEnabled }}'
+        rspeed: '{{ queryprocs.json.Oem.Hp.RatedSpeedMHz }}'
+      when: ilover == 4
+      no_log: '{{ nolog }}'
+     
+    - set_fact:
+        L1: '{{ queryprocs.json.Oem.Hpe.Cache[0].MaximumSizeKB }}'
+        L2: '{{ queryprocs.json.Oem.Hpe.Cache[1].MaximumSizeKB }}'
+        L3: '{{ queryprocs.json.Oem.Hpe.Cache[2].MaximumSizeKB }}'
+        ecores: '{{ queryprocs.json.Oem.Hpe.CoresEnabled }}'
+        rspeed: '{{ queryprocs.json.Oem.Hpe.RatedSpeedMHz }}'
+      when: ilover == 5
+      no_log: '{{ nolog }}'
+
+    - name: Retrieve BIOS settings
+      uri:
+        url: 'https://{{ inventory_hostname }}/redfish/v1/systems/1/bios/settings'
+        method: GET
+        return_content: yes
+        url_username: '{{ username }}'
+        url_password: '{{ password }}'
+        validate_certs: false
+        status_code: 200
+        use_proxy: false
+        force_basic_auth: true
+      register: querybios
+      delegate_to: localhost
+      no_log: '{{ nolog }}'
+      changed_when: false
+
+    - set_fact:
+        HT: '{{ querybios.json.Attributes.ProcHyperthreading|default("") }}'
+        PR: '{{ querybios.json.Attributes.PowerRegulator|default("") }}'
+        PP: '{{ querybios.json.Attributes.PowerProfile|default("") }}'
+#        TB: '{{ querybios.json.Attributes.ProcTurbo }}'    
+      when: ilover == 5
+    - set_fact:
+        HT: '{{ querybios.json.ProcHyperthreading|default("") }}'
+        PR: '{{ querybios.json.PowerRegulator|default("")}}'
+        PP: '{{ querybios.json.PowerProfile|default("") }}'
+#        TB: '{{ querybios.json.ProcTurbo }}'    
+      when: ilover == 4
+   
+    - set_fact:
+        HT: '{{ querybios.json.Attributes.ProcSMT|default("") }}'
+      when: HT == ''
+    - set_fact:
+        PP: '{{ querybios.json.Attributes.WorkloadProfile|default("") }}'
+      when: PP == ""
+      
+#        msg: '{{ querybios.json.WorkloadProfile }}'
+#    - debug:
+   
+    - name: Show server/iLO info
+      debug:
+        msg:
+          - 'iLOVersion: {{ ilover }}'
+          - 'BIOS: {{ query.json.BiosVersion }}'
+          - 'BootOverride: {{ query.json.Boot.UefiTargetBootSourceOverride| default("") }}'
+          - 'HostName: {{ query.json.HostName }}'
+          - 'TotalMemory: {{ query.json.MemorySummary.TotalSystemMemoryGiB }} GB'
+          - 'Model: {{ query.json.Model }}'
+          - 'Power: {{ query.json.PowerState }}'
+          - 'Processor count: {{ query.json.ProcessorSummary.Count }}'
+          - 'Processor Model: {{ query.json.ProcessorSummary.Model }}'
+          - 'Processor Max Speed: {{ queryprocs.json.MaxSpeedMHz }} MHz'
+          - 'Processor Rated Speed: {{ rspeed }} MHz'
+          - 'Processor Arch: {{ queryprocs.json.InstructionSet }}'
+          - 'Processor L1: {{ L1 }} Kbytes'
+          - 'Processor L2: {{ L2 }} Kbytes'
+          - 'Processor L3: {{ L3 }} Kbytes'
+          - 'Processor Tot cores: {{ queryprocs.json.TotalCores }}'
+          - 'Processor enabled cores: {{ ecores }}'
+          - 'SKU/Product ID: {{ query.json.SKU }}'
+          - 'SerialNumber: {{ query.json.SerialNumber }}'
+          - 'Number network ports: {{ num_interfaces }}'
+          - 'MAC Addresses: {{ mac4 + mac5|list }}'
+          - 'Power Regulator: {{ PR | default("") }}'
+          - 'Power/Wordkload Profile: {{ PP | default("") }}'
+          - 'HyperThreading: {{ HT }}'
+...

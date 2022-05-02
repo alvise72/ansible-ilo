@@ -1,0 +1,52 @@
+---
+- name: Control power or managed host
+  hosts: all
+  gather_facts: false
+  tasks:
+
+    - name: Set default action
+      set_fact:
+        action: 'On'
+ 
+    - name: Set ForceRestart
+      set_fact:
+        action: 'ForceRestart'
+      when: reset is defined
+      
+    - name: Set ForceOff
+      set_fact:
+        action: 'ForceOff'
+      when: off is defined  
+        
+    - name: Set On
+      set_fact:
+        action: 'On'
+      when: on is defined
+    
+    - name: Set PushButton
+      set_fact:
+        acton: 'PushPowerButton'
+      when: momentary is defined
+    
+    - name: Execute URI module
+      uri:
+        url: 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/Actions/ComputerSystem.Reset/'
+        method: POST
+        return_content: yes
+        url_username: admin
+        url_password: 'this is a secure one'
+        validate_certs: false
+        status_code: 200
+        use_proxy: false
+        body_format: json
+        body: {"Action":"Reset","ResetType":"{{ action }}"}
+        force_basic_auth: true
+      register: result
+      delegate_to: localhost
+      #no_log: true
+      
+    - name: Show response
+      debug:
+        var: result.json.Messages      
+      when: result.status != 200
+...

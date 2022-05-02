@@ -1,0 +1,81 @@
+---
+- name: Query iLO information
+  hosts: all
+  gather_facts: false
+  vars:
+    type: 'hd'
+  tasks:
+    - name: Execute URI module to get iLO/BIOS Boot info
+      uri:
+        url: 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BIOS/Boot/settings'
+        method: GET
+        return_content: yes
+        url_username: '{{ username }}'
+        url_password: '{{ password }}'
+        validate_certs: false
+        status_code: 200
+        use_proxy: false
+        force_basic_auth: true
+      register: query
+      delegate_to: localhost
+      no_log: false
+      changed_when: false
+
+    - debug:
+        msg: '{{ query.json.PersistentBootConfigOrder }}'
+      when: show is defined
+
+    - meta: end_play
+      when: show is defined
+
+        #    - fail:
+        #        msg: User requested to show and quit
+        #      when: show is defined
+
+    - set_fact:
+        otherdevs: []
+        nicdevs: []
+    
+    - set_fact:
+        matchboot: 'NIC.*IPv4'
+      when: type == 'net'
+
+    - set_fact:
+        matchboot: 'HD.*'
+      when: type == 'hd'
+
+    - set_fact:
+        nicdevs: '{{ nicdevs + [item] }}'
+      loop: "{{ query.json.PersistentBootConfigOrder }}"
+      when: item is match("{{ matchboot }}")
+
+    - set_fact:
+        otherdevs: '{{ otherdevs + [item] }}'
+      loop: "{{ query.json.PersistentBootConfigOrder }}"
+      when: item is not match("{{ matchboot }}")
+    
+    - set_fact:
+        alldevs: '{{ nicdevs + otherdevs }}'
+
+    - set_fact:
+        body: '{ "PersistentBootConfigOrder": {{ alldevs | to_json }} }'
+
+    - name: Patch BIOS/Boot/settings - PersistentBootConfigOrder
+      uri:
+        url: 'https://{{ inventory_hostname }}/redfish/v1/systems/1/bios/boot/settings/'
+        method: PATCH
+        return_content: yes
+        url_username: '{{ username }}'
+        url_password: '{{ password }}'
+        validate_certs: false
+        status_code: 200
+        use_proxy: false
+        force_basic_auth: true
+        body_format: json
+        body: " {{ body }} "
+      register: query
+      delegate_to: localhost
+      no_log: false
+      changed_when: false
+
+...

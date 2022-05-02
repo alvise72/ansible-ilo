@@ -1,0 +1,74 @@
+---
+- name: New iLO user Playbook
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Check command line options
+      fail:
+        msg: For this playbook must specify -e 'ilo_newusername=<new user name>' -e 'ilo_newpassword=<new user name password>'
+      when: ilo_newusername is not defined or ilo_newpassword is not defined
+
+    - set_fact:
+        priv: 'readonly'
+      no_log: true
+      
+    - uri:
+        url: 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/'
+        method: GET
+        return_content: yes
+        url_username: '{{ username }}'
+        url_password: '{{ password }}'
+        validate_certs: false
+        status_code: 200
+        use_proxy: false
+        force_basic_auth: true
+      register: query
+      delegate_to: localhost
+      no_log: true
+
+    - set_fact:
+        ilover: 4
+        HP: 'Hp'
+      when: query.odata_version is not defined
+      no_log: true
+
+    - set_fact:
+        ilover: 5
+        HP: 'Hpe'
+      when: query.odata_version is defined
+      no_log: true
+
+    - set_fact:
+        body: '{"UserName":"{{ ilo_newusername }}","Password":"{{ ilo_newpassword }}","Oem":{"{{ HP }}":{"LoginName":"{{ ilo_newusername }}","Privileges": {"VirtualMediaPriv": false, "VirtualPowerAndResetPriv": false, "iLOConfigPriv": false,  "LoginPriv":true,"RemoteConsolePriv":false,"UserConfigPriv":false, "SystemRecoveryConfigPriv": false, "HostBIOSConfigPriv": false, "HostNICConfigPriv": false, "HostStorageConfigPriv": false}}}}'
+      when: priv == 'readonly' and ilover == 5
+      no_log: true
+      
+    - set_fact:
+        body: '{"UserName":"{{ ilo_newusername }}","Password":"{{ ilo_newpassword }}","Oem":{"{{ HP }}":{"LoginName":"{{ ilo_newusername }}","Privileges": {"VirtualMediaPriv": true, "VirtualPowerAndResetPriv": true, "iLOConfigPriv": true,  "LoginPriv":true,"RemoteConsolePriv":true,"UserConfigPriv":true, "SystemRecoveryConfigPriv": true, "HostBIOSConfigPriv": true, "HostNICConfigPriv": true, "HostStorageConfigPriv": true}}}}'
+      when: priv == 'admin' and ilover == 5
+      no_log: true
+      
+    - set_fact:
+        body: '{"UserName":"{{ ilo_newusername }}","Password":"{{ ilo_newpassword }}","Oem":{"{{ HP }}":{"LoginName":"{{ ilo_newusername }}","Privileges": {"VirtualMediaPriv": false, "VirtualPowerAndResetPriv": false, "iLOConfigPriv": false,  "LoginPriv":true,"RemoteConsolePriv":false,"UserConfigPriv":false }}}}'
+      when: priv == 'readonly' and ilover == 4
+      no_log: true
+      
+    - set_fact:
+        body: '{"UserName":"{{ ilo_newusername }}","Password":"{{ ilo_newpassword }}","Oem":{"{{ HP }}":{"LoginName":"{{ ilo_newusername }}","Privileges": {"VirtualMediaPriv": true, "VirtualPowerAndResetPriv": true, "iLOConfigPriv": true,  "LoginPriv":true,"RemoteConsolePriv":true,"UserConfigPriv":true }}}}'
+      when: priv == 'admin' and ilover == 4
+      no_log: true
+      
+    - name: "Add a new user '{{ ilo_newusername }}' to  {{ inventory_hostname }} (iLO{{ ilover }})"
+      uri:
+        url: "https://{{ inventory_hostname }}/redfish/v1/AccountService/Accounts/"
+        method: POST
+        validate_certs: no
+        force_basic_auth: yes
+        status_code: 201
+        url_username: '{{ username }}'
+        url_password: '{{ password }}'
+        body_format: json
+        body: '{{ body }}'
+      no_log: true
+      delegate_to: localhost
+...

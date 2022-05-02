@@ -1,0 +1,43 @@
+ILO5
+----------------
+/redfish/v1/Systems/1/
+/redfish/v1/systems/1/bios/
+/redfish/v1/Systems/1/BootOptions/
+/redfish/v1/Systems/1/EthernetInterfaces/
+/redfish/v1/Chassis/1/
+/redfish/v1/Managers/1/
+/redfish/v1/Systems/1/LogServices/
+/redfish/v1/Systems/1/Memory/
+/redfish/v1/Systems/1/MemoryDomains/
+/redfish/v1/Systems/1/NetworkInterfaces/
+/redfish/v1/Systems/1/BaseNetworkAdapters/
+/redfish/v1/Systems/1/PCIDevices/
+/redfish/v1/Systems/1/PCISlots/
+/redfish/v1/systems/1/hpsut/
+/redfish/v1/Systems/1/SmartStorage/
+/redfish/v1/systems/1/smartstorageconfig/
+/redfish/v1/Systems/1/Processors/
+/redfish/v1/Systems/1/SecureBoot/
+/redfish/v1/Systems/1/Storage/
+/redfish/v1/SchemaStore/en/ComputerSystem.json
+/redfish/v1/systems/1/bios/settings/
+
+ILO4
+------------------
+/redfish/v1/Systems/1/
+/redfish/v1/systems/1/bios/
+/redfish/v1/Systems/1/Memory/
+/redfish/v1/Systems/1/NetworkAdapters/
+/redfish/v1/Systems/1/EthernetInterfaces/
+/redfish/v1/Systems/1/LogServices/
+/redfish/v1/Systems/1/FirmwareInventory/
+/redfish/v1/Systems/1/PCIDevices/
+/redfish/v1/Systems/1/PCISlots/
+/redfish/v1/Managers/1/
+/redfish/v1/systems/1/bios/settings/
+
+DAQ-3 - Gen10 iLO5 - Intel (DL380) - 2CPU
+DAQ-7 - Gen10 iLO5 - AMD (DL385) - 2CPU
+EXP-4 - Gen10 iLO5 - AMD (DL325) - 1CPU
+EXP11 - Gen9  iLO4 - Intel (DL380) - 2CPU
+CN-16 - Gen9  iLO4 - Intel (blade) - 2CPU

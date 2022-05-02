@@ -1,0 +1,30 @@
+---
+- name: Browse iLO APIs
+  hosts: all
+  gather_facts: false
+  tasks:
+
+    - name: Check command line options
+      fail:
+        msg: For this playbook must specify -e 'api=<API>'
+      when: api is not defined
+
+    - name: Execute URI module to get iLO/BIOS info
+      uri:
+        url: 'https://{{ inventory_hostname }}{{ api }}'
+        method: GET
+        return_content: yes
+        url_username: '{{ username }}'
+        url_password: '{{ password }}'
+        validate_certs: false
+        status_code: 200
+        use_proxy: false
+        force_basic_auth: true
+      register: query
+      delegate_to: localhost
+      no_log: false
+      changed_when: false
+
+    - debug:
+        msg: '{{ query.json }}'
+...
