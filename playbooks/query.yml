@@ -20,10 +20,6 @@
       delegate_to: localhost
       no_log: '{{ nolog }}'
       changed_when: false
-
-#    - debug:
-#        msg: '{{ query }}'
-#      when: debugquery is defined
            
     - name: Execute URI module to get Ethernet interfaces info
       uri:
@@ -40,10 +36,6 @@
       delegate_to: localhost
       no_log: '{{ nolog }}'
       changed_when: false
-
-    #- name: Debug
-    #  ansible.builtin.debug:
-    #    msg: '{{ queryethnum }}'
 
     - name: ILO5 set facts
       set_fact: 
@@ -72,35 +64,11 @@
         array_interfaces: []
       no_log: '{{ nolog }}'
 
-    #- name:
-    #  debug:
-    #    msg: '{{ ( item | to_json(ensure_ascii=False) | split(": "))[1][2:-3]  }}'
-    #  #  msg: '{{item}}'
-    #  loop: "{{ queryethnum.json.Members }}"
-
-    #- name: END
-    #  meta: end_play
-
-    #- name:
-    #  debug:
-    #    msg: 'ITEM = {{ ( item | to_json(ensure_ascii=False) | split(": "))[1][2:-3] }}'
-    #  loop: "{{ queryethnum.json.Members }}"
-
-
     - name: Extract ETH names to be queries later on
       set_fact:
         array_interfaces: '{{ array_interfaces + [ ( item | to_json(ensure_ascii=False) | split(": "))[1][2:-3]]  }}'
       loop: '{{ queryethnum.json.Members }}'
       no_log: '{{ nolog }}'
-
-
-
-    #- name: Debug array_interfaces
-    #  ansible.builtin.debug:
-    #    msg: '{{ array_interfaces }}'
-
-    #- name: Debug
-    #  meta: end_play
 
     - name: Retrieve Ethernet info
       uri:
@@ -118,23 +86,6 @@
       loop: "{{ array_interfaces }}"
       no_log: '{{ nolog }}'
 
-    #- name: Retrieve Ethernet info
-    #  uri:
-    #    url: 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/EthernetInterfaces/{{ item }}/'
-    #    method: GET
-    #    return_content: yes
-    #    url_username: '{{ username }}'
-    #    url_password: '{{ password }}'
-    #    validate_certs: false
-    #    status_code: 200
-    #    use_proxy: false
-    #    force_basic_auth: true
-    #  register: queryeths
-    #  delegate_to: localhost
-    #  loop: "{{ range(1, 1 + num_interfaces|int, 1)|list }}"
-    #  no_log: '{{ nolog }}'
-    #  changed_when: false
-
     - set_fact:
         NIC: []
         MAC4: []
@@ -147,7 +98,7 @@
       set_fact:
         NIC: '{{ NIC + [item.json] }}'
       loop: "{{ queryeths.results }}"
-      #no_log: '{{ nolog }}'
+      no_log: '{{ nolog }}'
       changed_when: false
 
     - name: Set MAC array
@@ -172,7 +123,7 @@
         url: 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/Processors/1/'
         method: GET
         return_content: yes
-        url_username: '{{ username }}'
+        url_username: '{{ username }}'
         url_password: '{{ password }}'
         validate_certs: false
         status_code: 200
@@ -220,14 +171,12 @@
     - set_fact:
         HT: '{{ querybios.json.Attributes.ProcHyperthreading|default("") }}'
         PR: '{{ querybios.json.Attributes.PowerRegulator|default("") }}'
-        PP: '{{ querybios.json.Attributes.PowerProfile|default("") }}'
-#        TB: '{{ querybios.json.Attributes.ProcTurbo }}'    
+        PP: '{{ querybios.json.Attributes.PowerProfile|default("") }}' 
       when: ilover == 5
     - set_fact:
         HT: '{{ querybios.json.ProcHyperthreading|default("") }}'
         PR: '{{ querybios.json.PowerRegulator|default("")}}'
         PP: '{{ querybios.json.PowerProfile|default("") }}'
-#        TB: '{{ querybios.json.ProcTurbo }}'    
       when: ilover == 4
    
     - set_fact:
@@ -237,9 +186,6 @@
         PP: '{{ querybios.json.Attributes.WorkloadProfile|default("") }}'
       when: PP == ""
       
-#        msg: '{{ querybios.json.WorkloadProfile }}'
-#    - debug:
-   
     - name: Show server/iLO info
       debug:
         msg:
