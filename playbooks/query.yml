@@ -21,9 +21,9 @@
       no_log: '{{ nolog }}'
       changed_when: false
 
-    - debug:
-        msg: '{{ query }}'
-      when: debugquery is defined
+#    - debug:
+#        msg: '{{ query }}'
+#      when: debugquery is defined
            
     - name: Execute URI module to get Ethernet interfaces info
       uri:
@@ -41,9 +41,9 @@
       no_log: '{{ nolog }}'
       changed_when: false
 
-#    - debug:
-#      when: debugquery is defined
-#        msg: '{{ queryethnum }}'
+    #- name: Debug
+    #  ansible.builtin.debug:
+    #    msg: '{{ queryethnum }}'
 
     - name: ILO5 set facts
       set_fact: 
@@ -67,9 +67,44 @@
       no_log: '{{ nolog }}'
       changed_when: false
 
+    - name: Init array_interfaces
+      set_fact: 
+        array_interfaces: []
+      no_log: '{{ nolog }}'
+
+    #- name:
+    #  debug:
+    #    msg: '{{ ( item | to_json(ensure_ascii=False) | split(": "))[1][2:-3]  }}'
+    #  #  msg: '{{item}}'
+    #  loop: "{{ queryethnum.json.Members }}"
+
+    #- name: END
+    #  meta: end_play
+
+    #- name:
+    #  debug:
+    #    msg: 'ITEM = {{ ( item | to_json(ensure_ascii=False) | split(": "))[1][2:-3] }}'
+    #  loop: "{{ queryethnum.json.Members }}"
+
+
+    - name: Extract ETH names to be queries later on
+      set_fact:
+        array_interfaces: '{{ array_interfaces + [ ( item | to_json(ensure_ascii=False) | split(": "))[1][2:-3]]  }}'
+      loop: '{{ queryethnum.json.Members }}'
+      no_log: '{{ nolog }}'
+
+
+
+    #- name: Debug array_interfaces
+    #  ansible.builtin.debug:
+    #    msg: '{{ array_interfaces }}'
+
+    #- name: Debug
+    #  meta: end_play
+
     - name: Retrieve Ethernet info
       uri:
-        url: 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/EthernetInterfaces/{{ item }}/'
+        url: 'https://{{ inventory_hostname }}/{{ item }}/'
         method: GET
         return_content: yes
         url_username: '{{ username }}'
@@ -80,14 +115,31 @@
         force_basic_auth: true
       register: queryeths
       delegate_to: localhost
-      loop: "{{ range(1, 1 + num_interfaces|int, 1)|list }}"
+      loop: "{{ array_interfaces }}"
       no_log: '{{ nolog }}'
-      changed_when: false
+
+    #- name: Retrieve Ethernet info
+    #  uri:
+    #    url: 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/EthernetInterfaces/{{ item }}/'
+    #    method: GET
+    #    return_content: yes
+    #    url_username: '{{ username }}'
+    #    url_password: '{{ password }}'
+    #    validate_certs: false
+    #    status_code: 200
+    #    use_proxy: false
+    #    force_basic_auth: true
+    #  register: queryeths
+    #  delegate_to: localhost
+    #  loop: "{{ range(1, 1 + num_interfaces|int, 1)|list }}"
+    #  no_log: '{{ nolog }}'
+    #  changed_when: false
 
     - set_fact:
         NIC: []
         MAC4: []
         MAC5: []
+        MAC6: []
       no_log: '{{ nolog }}'
       changed_when: false
 
@@ -95,20 +147,23 @@
       set_fact:
         NIC: '{{ NIC + [item.json] }}'
       loop: "{{ queryeths.results }}"
-      no_log: '{{ nolog }}'
+      #no_log: '{{ nolog }}'
       changed_when: false
 
     - name: Set MAC array
       set_fact:
         MAC4: '{{ MAC4 + [item.MacAddress|default("")] }}'
         MAC5: '{{ MAC5 + [item.MACAddress|default("")] }}'
+        MAC6: '{{ MAC6 + [item.PermanentMACAddress|default("")] }}'
       loop: '{{ NIC }}'
       no_log: '{{ nolog }}'
       changed_when: false
 
     - set_fact:
+        mac6: "{{ MAC6|select('match', '[^$]')|list }}"
         mac5: "{{ MAC5|select('match', '[^$]')|list }}"
         mac4: "{{ MAC4|select('match', '[^$]')|list }}"
+
       no_log: '{{ nolog }}'
       changed_when: false
       
@@ -208,7 +263,7 @@
           - 'SKU/Product ID: {{ query.json.SKU }}'
           - 'SerialNumber: {{ query.json.SerialNumber }}'
           - 'Number network ports: {{ num_interfaces }}'
-          - 'MAC Addresses: {{ mac4 + mac5|list }}'
+          - 'MAC Addresses: {{ mac4 + mac5 + mac6|list }}'
           - 'Power Regulator: {{ PR | default("") }}'
           - 'Power/Wordkload Profile: {{ PP | default("") }}'
           - 'HyperThreading: {{ HT }}'
