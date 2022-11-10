@@ -3,11 +3,59 @@
   hosts: all
   gather_facts: false
   vars:
-    type: 'hd'
+    - type: 'hd'
+    - url: {
+        'gen9': 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BIOS/Boot/settings',
+        'gen10': 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BootOptions/',
+        'gen10p': 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BootOptions/'
+      }
+    - gen: 'gen9'
+
   tasks:
+    - name: Gather summary information
+      uri:
+        url: 'https://{{ inventory_hostname }}/redfish/v1/'
+        method: GET
+        return_content: yes
+        url_username: '{{ username }}'
+        url_password: '{{ password }}'
+        validate_certs: false
+        status_code: 200
+        use_proxy: false
+        force_basic_auth: true
+      register: query
+      delegate_to: localhost
+      no_log: false
+      changed_when: false
+
+    - name: Determine if Gen9
+      set_fact:
+        gen: 'gen9'
+      when: query.json.Product is not defined
+      changed_when: false
+      no_log: '{{ nolog }}'
+
+    - name: Determine if Gen10
+      set_fact:
+        gen: 'gen10'
+      when:
+        - query.json.Product is defined
+        - query.json.Product is match(".*Gen10")
+      changed_when: false
+      no_log: '{{ nolog }}'
+
+    - name: Determine if Gen10+
+      set_fact:
+        gen: 'gen10p'
+      when:
+        - query.json.Product is defined
+        - query.json.Product is match(".*Gen10 Plus")
+      changed_when: false
+      no_log: '{{ nolog }}'
+
     - name: Execute URI module to get iLO/BIOS Boot info
       uri:
-        url: 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BIOS/Boot/settings'
+        url: '{{ url[gen] }}' #'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BIOS/Boot/settings'
         method: GET
         return_content: yes
         url_username: '{{ username }}'
@@ -21,16 +69,68 @@
       no_log: false
       changed_when: false
 
-    - debug:
+    #- debug:
+    #    msg: '{{ query.json }}'
+    #  when: show is defined
+
+    - name: Showing result for Gen9 server
+      debug: 
         msg: '{{ query.json.PersistentBootConfigOrder }}'
-      when: show is defined
+      when: gen == 'gen9'
+
+    - meta: end_play
+      when:  gen == 'gen9' and show is defined
+
+    - name: Init array_boot_devices
+      set_fact: 
+        array_boot_devices: []
+      no_log: '{{ nolog }}'
+      when: gen == 'gen10' or gen == 'gen10p'
+
+    - name: Gather boot device IDs
+      set_fact:
+        array_boot_devices: '{{ array_boot_devices + [ ( item | to_json(ensure_ascii=False) | split(": "))[1][2:-3]]  }}'
+      loop: '{{ query.json.Members }}'
+      no_log: '{{ nolog }}'
+      when: gen == 'gen10' or gen == 'gen10p'
+
+    - name: Gather boot device names
+      uri:
+        url: 'https://{{ inventory_hostname }}/{{item}}'
+        method: GET
+        return_content: yes
+        url_username: '{{ username }}'
+        url_password: '{{ password }}'
+        validate_certs: false
+        status_code: 200
+        use_proxy: false
+        force_basic_auth: true
+      register: querybootdev
+      delegate_to: localhost
+      no_log: '{{nolog}}'
+      changed_when: false
+      loop: '{{ array_boot_devices }}'
+      when: gen == 'gen10' or gen == 'gen10p'
+
+    - set_fact:
+        bootdevs: []
+      when: gen == 'gen10' or gen == 'gen10p'
+
+    - name: Collecting all boot devices
+      set_fact:
+        #msg: '{{ item.json.DisplayName }}'
+        bootdevs: '{{ bootdevs + [item.json.DisplayName] }}'
+      loop: '{{ querybootdev.results }}'
+      loop_control:
+        label: ""
+      no_log: '{{nolog}}'
+      when: gen == 'gen10' or gen == 'gen10p'
+
+    - debug:
+        msg: '{{ bootdevs }}'
 
     - meta: end_play
       when: show is defined
-
-        #    - fail:
-        #        msg: User requested to show and quit
-        #      when: show is defined
 
     - set_fact:
         otherdevs: []
