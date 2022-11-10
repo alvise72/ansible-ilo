@@ -10,4 +10,4 @@ if [[ "$1" =~ psi.ch$ ]]; then
 else
 	server="$1.psi.ch"
 fi
-ansible-playbook -l $server playbooks/boot.yml -e "show=1" --vault-password-file $HOME/ansible-vault-password
+ansible-playbook -l $server playbooks/boot.yml -e "show=1" --vault-password-file $HOME/ansible-vault-password -e "nolog=true"

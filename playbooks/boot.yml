@@ -69,10 +69,6 @@
       no_log: false
       changed_when: false
 
-    #- debug:
-    #    msg: '{{ query.json }}'
-    #  when: show is defined
-
     - name: Showing result for Gen9 server
       debug: 
         msg: '{{ query.json.PersistentBootConfigOrder }}'
@@ -91,6 +87,8 @@
       set_fact:
         array_boot_devices: '{{ array_boot_devices + [ ( item | to_json(ensure_ascii=False) | split(": "))[1][2:-3]]  }}'
       loop: '{{ query.json.Members }}'
+      loop_control:
+        label: ""
       no_log: '{{ nolog }}'
       when: gen == 'gen10' or gen == 'gen10p'
 
@@ -110,6 +108,8 @@
       no_log: '{{nolog}}'
       changed_when: false
       loop: '{{ array_boot_devices }}'
+      loop_control:
+        label: ""
       when: gen == 'gen10' or gen == 'gen10p'
 
     - set_fact:
@@ -118,7 +118,6 @@
 
     - name: Collecting all boot devices
       set_fact:
-        #msg: '{{ item.json.DisplayName }}'
         bootdevs: '{{ bootdevs + [item.json.DisplayName] }}'
       loop: '{{ querybootdev.results }}'
       loop_control:
@@ -126,7 +125,8 @@
       no_log: '{{nolog}}'
       when: gen == 'gen10' or gen == 'gen10p'
 
-    - debug:
+    - name: Showing Result for Gen10[+] server
+      debug:
         msg: '{{ bootdevs }}'
 
     - meta: end_play
@@ -147,11 +147,15 @@
     - set_fact:
         nicdevs: '{{ nicdevs + [item] }}'
       loop: "{{ query.json.PersistentBootConfigOrder }}"
+      loop_control:
+        label: ""
       when: item is match("{{ matchboot }}")
 
     - set_fact:
         otherdevs: '{{ otherdevs + [item] }}'
       loop: "{{ query.json.PersistentBootConfigOrder }}"
+      loop_control:
+        label: ""
       when: item is not match("{{ matchboot }}")
     
     - set_fact:
