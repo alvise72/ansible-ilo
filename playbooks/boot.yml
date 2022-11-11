@@ -4,17 +4,26 @@
   gather_facts: false
   vars:
     - type: 'hd'
+    - baseapi: '/redfish/v1/'
+    - baseapibios: '/redfish/v1/Systems/1/bios'
     - url: {
-        'gen9': 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BIOS/Boot/settings',
-        'gen10': 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BootOptions/',
-        'gen10p': 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BootOptions/'
+        #'gen9': 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BIOS/Boot/settings',
+        #'gen10': 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BootOptions/',
+        #'gen10p': 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BootOptions/'
+        'gen9': '/boot',
+        'gen10': '/boot',
+        'gen10p': '/oem/hpe/boot/settings/'
       }
     - gen: 'gen9'
+
+#G9:  	https://rmsf-daq-4.psi.ch:443 " GET /rest/v1/systems/1/bios/boot
+#G10:	https://rmsf-daq-3.psi.ch:443 " GET /redfish/v1/systems/1/bios/boot/
+#G10+:	https://rmsf-daq-13.psi.ch:443 "GET /redfish/v1/systems/1/bios/oem/hpe/boot/settings/
 
   tasks:
     - name: Gather summary information
       uri:
-        url: 'https://{{ inventory_hostname }}/redfish/v1/'
+        url: 'https://{{ inventory_hostname }}{{baseapi}}'
         method: GET
         return_content: yes
         url_username: '{{ username }}'
@@ -53,9 +62,9 @@
       changed_when: false
       no_log: '{{ nolog }}'
 
-    - name: Execute URI module to get iLO/BIOS Boot info
+    - name: Gathering Bios Info
       uri:
-        url: '{{ url[gen] }}' #'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BIOS/Boot/settings'
+        url: 'https://{{ inventory_hostname }}{{baseapibios}}{{ url[gen] }}'
         method: GET
         return_content: yes
         url_username: '{{ username }}'
@@ -69,13 +78,13 @@
       no_log: '{{nolog}}'
       changed_when: false
 
-    - name: Showing result (Gen9)
+    - name: Showing result
       debug: 
         msg: '{{ query.json.PersistentBootConfigOrder }}'
-      when: gen == 'gen9'
+      #when: gen == 'gen9' or gen == 'gen10'
 
     - meta: end_play
-      when:  gen == 'gen9' and show is defined
+      when: show is defined
 
     - name: Init array_boot_devices (Gen10/Gen10+)
       set_fact: 
