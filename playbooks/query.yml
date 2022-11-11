@@ -66,7 +66,7 @@
 
     - name: Extract ETH names to be queries later on
       set_fact:
-        array_interfaces: '{{ array_interfaces + [ ( item | to_json(ensure_ascii=False) | split(": "))[1][2:-3]]  }}'
+        array_interfaces: '{{ array_interfaces + [ ( item | to_json(ensure_ascii=False) | ansible.builtin.split(": "))[1][2:-3]]  }}'
       loop: '{{ queryethnum.json.Members }}'
       no_log: '{{ nolog }}'
 
@@ -75,7 +75,7 @@
         url: 'https://{{ inventory_hostname }}/{{ item }}/'
         method: GET
         return_content: yes
-        url_username: '{{ username }}'
+        url_username: '{{ username }}'
         url_password: '{{ password }}'
         validate_certs: false
         status_code: 200

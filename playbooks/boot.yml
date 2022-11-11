@@ -25,7 +25,7 @@
         force_basic_auth: true
       register: query
       delegate_to: localhost
-      no_log: false
+      no_log: '{{nolog}}'
       changed_when: false
 
     - name: Determine if Gen9
@@ -66,10 +66,10 @@
         force_basic_auth: true
       register: query
       delegate_to: localhost
-      no_log: false
+      no_log: '{{nolog}}'
       changed_when: false
 
-    - name: Showing result for Gen9 server
+    - name: Showing result (Gen9)
       debug: 
         msg: '{{ query.json.PersistentBootConfigOrder }}'
       when: gen == 'gen9'
@@ -77,13 +77,13 @@
     - meta: end_play
       when:  gen == 'gen9' and show is defined
 
-    - name: Init array_boot_devices
+    - name: Init array_boot_devices (Gen10/Gen10+)
       set_fact: 
         array_boot_devices: []
       no_log: '{{ nolog }}'
       when: gen == 'gen10' or gen == 'gen10p'
 
-    - name: Gather boot device IDs
+    - name: Gather boot device IDs (Gen10/Gen10+)
       set_fact:
         array_boot_devices: '{{ array_boot_devices + [ ( item | to_json(ensure_ascii=False) | split(": "))[1][2:-3]]  }}'
       loop: '{{ query.json.Members }}'
@@ -92,7 +92,7 @@
       no_log: '{{ nolog }}'
       when: gen == 'gen10' or gen == 'gen10p'
 
-    - name: Gather boot device names
+    - name: Gather boot device names (Gen10/Gen10+)
       uri:
         url: 'https://{{ inventory_hostname }}/{{item}}'
         method: GET
@@ -114,9 +114,10 @@
 
     - set_fact:
         bootdevs: []
+      no_log: '{{nolog}}'
       when: gen == 'gen10' or gen == 'gen10p'
 
-    - name: Collecting all boot devices
+    - name: Collecting all boot devices (Gen10/Gen10+)
       set_fact:
         bootdevs: '{{ bootdevs + [item.json.DisplayName] }}'
       loop: '{{ querybootdev.results }}'
@@ -125,9 +126,10 @@
       no_log: '{{nolog}}'
       when: gen == 'gen10' or gen == 'gen10p'
 
-    - name: Showing Result for Gen10[+] server
+    - name: Showing Result (Gen10/Gen10+)
       debug:
         msg: '{{ bootdevs }}'
+      when: gen == 'gen10' or gen == 'gen10p'
 
     - meta: end_play
       when: show is defined
@@ -137,7 +139,7 @@
         nicdevs: []
     
     - set_fact:
-        matchboot: 'NIC.*IPv4'
+        matchboot: 'PXE IPv4'
       when: type == 'net'
 
     - set_fact:
@@ -149,20 +151,26 @@
       loop: "{{ query.json.PersistentBootConfigOrder }}"
       loop_control:
         label: ""
-      when: item is match("{{ matchboot }}")
+      when: 
+        - item is match("{{ matchboot }}")
+        - gen == 'gen9'
 
     - set_fact:
         otherdevs: '{{ otherdevs + [item] }}'
       loop: "{{ query.json.PersistentBootConfigOrder }}"
       loop_control:
         label: ""
-      when: item is not match("{{ matchboot }}")
+      when: 
+        - item is not match("{{ matchboot }}")
+        - gen == 'gen9'
     
     - set_fact:
         alldevs: '{{ nicdevs + otherdevs }}'
+      when: gen == 'gen9'
 
     - set_fact:
         body: '{ "PersistentBootConfigOrder": {{ alldevs | to_json }} }'
+      when: gen == 'gen9'
 
     - name: Patch BIOS/Boot/settings - PersistentBootConfigOrder
       uri:
@@ -179,7 +187,8 @@
         body: " {{ body }} "
       register: query
       delegate_to: localhost
-      no_log: false
+      no_log: '{{nolog}}'
       changed_when: false
+      when: gen == 'gen9'
 
 ...
