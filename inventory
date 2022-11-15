@@ -2,11 +2,11 @@
 rmsf-cn-[1:20].psi.ch
 
 [daq]
-rmsf-daq-[1:14].psi.ch
+rmsf-daq-[1:13].psi.ch
 
 [daqsync]
 rmsf-daqsync-0[1:9].psi.ch
-rmsf-daqsync-1[0:7].psi.ch
+rmsf-daqsync-1[0:8].psi.ch
 
 [afm]
 rmsf-export-[3:4].psi.ch
