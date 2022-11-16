@@ -7,18 +7,11 @@
     - baseapi: '/redfish/v1/'
     - baseapibios: '/redfish/v1/Systems/1/bios'
     - url: {
-        #'gen9': 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BIOS/Boot/settings',
-        #'gen10': 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BootOptions/',
-        #'gen10p': 'https://{{ inventory_hostname }}/redfish/v1/Systems/1/BootOptions/'
         'gen9': '/boot',
         'gen10': '/boot',
         'gen10p': '/oem/hpe/boot/settings/'
       }
     - gen: 'gen9'
-
-#G9:  	https://rmsf-daq-4.psi.ch:443 " GET /rest/v1/systems/1/bios/boot
-#G10:	https://rmsf-daq-3.psi.ch:443 " GET /redfish/v1/systems/1/bios/boot/
-#G10+:	https://rmsf-daq-13.psi.ch:443 "GET /redfish/v1/systems/1/bios/oem/hpe/boot/settings/
 
   tasks:
     - name: Gather summary information
@@ -62,6 +55,11 @@
       changed_when: false
       no_log: '{{ nolog }}'
 
+    ##########################################################################
+    #
+    # Now we know which GenX is the server and then we can select the proper
+    # API to query
+    #
     - name: Gathering Bios Info
       uri:
         url: 'https://{{ inventory_hostname }}{{baseapibios}}{{ url[gen] }}'
@@ -78,112 +76,110 @@
       no_log: '{{nolog}}'
       changed_when: false
 
-    - name: Showing result
+    - name: Showing BOOT ORDER
       debug: 
         msg: '{{ query.json.PersistentBootConfigOrder }}'
-      #when: gen == 'gen9' or gen == 'gen10'
-
+      
     - meta: end_play
       when: show is defined
 
-    - name: Init array_boot_devices (Gen10/Gen10+)
-      set_fact: 
-        array_boot_devices: []
-      no_log: '{{ nolog }}'
-      when: gen == 'gen10' or gen == 'gen10p'
+    ##########################################################################
+    #
+    # If not only-show is selected, then proceed with boot order change
+    #
 
-    - name: Gather boot device IDs (Gen10/Gen10+)
-      set_fact:
-        array_boot_devices: '{{ array_boot_devices + [ ( item | to_json(ensure_ascii=False) | split(": "))[1][2:-3]]  }}'
-      loop: '{{ query.json.Members }}'
-      loop_control:
-        label: ""
-      no_log: '{{ nolog }}'
-      when: gen == 'gen10' or gen == 'gen10p'
+    #- name: Init array_boot_devices (Gen10/Gen10+)
+    #  set_fact: 
+    #    array_boot_devices: []
+    #  no_log: '{{ nolog }}'
+    #  when: gen == 'gen10' or gen == 'gen10p'
 
-    - name: Gather boot device names (Gen10/Gen10+)
-      uri:
-        url: 'https://{{ inventory_hostname }}/{{item}}'
-        method: GET
-        return_content: yes
-        url_username: '{{ username }}'
-        url_password: '{{ password }}'
-        validate_certs: false
-        status_code: 200
-        use_proxy: false
-        force_basic_auth: true
-      register: querybootdev
-      delegate_to: localhost
-      no_log: '{{nolog}}'
-      changed_when: false
-      loop: '{{ array_boot_devices }}'
-      loop_control:
-        label: ""
-      when: gen == 'gen10' or gen == 'gen10p'
+    #- name: Gather boot device IDs (Gen10/Gen10+)
+    #  set_fact:
+    #    array_boot_devices: '{{ array_boot_devices + [ ( item | to_json(ensure_ascii=False) | split(": "))[1][2:-3]]  }}'
+    #  loop: '{{ query.json.Members }}'
+    #  loop_control:
+    #    label: ""
+    #  no_log: '{{ nolog }}'
+    #  when: gen == 'gen10' or gen == 'gen10p'
 
-    - set_fact:
-        bootdevs: []
-      no_log: '{{nolog}}'
-      when: gen == 'gen10' or gen == 'gen10p'
+    #- name: Gather boot device names (Gen10/Gen10+)
+    #  uri:
+    #    url: 'https://{{ inventory_hostname }}/{{item}}'
+    #    method: GET
+    #    return_content: yes
+    #    url_username: '{{ username }}'
+    #    url_password: '{{ password }}'
+    #    validate_certs: false
+    #    status_code: 200
+    #    use_proxy: false
+    #    force_basic_auth: true
+    #  register: querybootdev
+    #  delegate_to: localhost
+    #  no_log: '{{nolog}}'
+    #  changed_when: false
+    #  loop: '{{ array_boot_devices }}'
+    #  loop_control:
+    #    label: ""
+    #  when: gen == 'gen10' or gen == 'gen10p'
 
-    - name: Collecting all boot devices (Gen10/Gen10+)
-      set_fact:
-        bootdevs: '{{ bootdevs + [item.json.DisplayName] }}'
-      loop: '{{ querybootdev.results }}'
-      loop_control:
-        label: ""
-      no_log: '{{nolog}}'
-      when: gen == 'gen10' or gen == 'gen10p'
+    #- set_fact:
+    #    bootdevs: []
+    #  no_log: '{{nolog}}'
+    #  when: gen == 'gen10' or gen == 'gen10p'
 
-    - name: Showing Result (Gen10/Gen10+)
-      debug:
-        msg: '{{ bootdevs }}'
-      when: gen == 'gen10' or gen == 'gen10p'
-
-    - meta: end_play
-      when: show is defined
+    #- name: Collecting all boot devices (Gen10/Gen10+)
+    #  set_fact:
+    #    bootdevs: '{{ bootdevs + [item.json.DisplayName] }}'
+    #  loop: '{{ querybootdev.results }}'
+    #  loop_control:
+    #    label: ""
+    #  no_log: '{{nolog}}'
+    #  when: gen == 'gen10' or gen == 'gen10p'
 
     - set_fact:
         otherdevs: []
         nicdevs: []
     
     - set_fact:
-        matchboot: 'PXE IPv4'
+        matchboot: '.*IPv4'
       when: type == 'net'
 
     - set_fact:
         matchboot: 'HD.*'
       when: type == 'hd'
 
+    - debug:
+        msg: 'Matchboot={{ matchboot }}'
+
     - set_fact:
         nicdevs: '{{ nicdevs + [item] }}'
       loop: "{{ query.json.PersistentBootConfigOrder }}"
       loop_control:
         label: ""
-      when: 
-        - item is match("{{ matchboot }}")
-        - gen == 'gen9'
+      when: item is match( matchboot )
 
     - set_fact:
         otherdevs: '{{ otherdevs + [item] }}'
       loop: "{{ query.json.PersistentBootConfigOrder }}"
       loop_control:
         label: ""
-      when: 
-        - item is not match("{{ matchboot }}")
-        - gen == 'gen9'
+      when: item is not match( matchboot )
     
     - set_fact:
         alldevs: '{{ nicdevs + otherdevs }}'
-      when: gen == 'gen9'
 
     - set_fact:
         body: '{ "PersistentBootConfigOrder": {{ alldevs | to_json }} }'
-      when: gen == 'gen9'
+
+    - debug:
+        msg: '{{body}}'
+
+    - meta: end_play
 
     - name: Patch BIOS/Boot/settings - PersistentBootConfigOrder
       uri:
-        url: 'https://{{ inventory_hostname }}/redfish/v1/systems/1/bios/boot/settings/'
+        url: 'https://{{ inventory_hostname }}{{baseapi}}{{ url[gen] }}'
         method: PATCH
         return_content: yes
         url_username: '{{ username }}'
@@ -198,6 +194,4 @@
       delegate_to: localhost
       no_log: '{{nolog}}'
       changed_when: false
-      when: gen == 'gen9'
-
 ...
