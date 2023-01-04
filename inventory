@@ -2,7 +2,10 @@
 rmsf-cn-[1:20].psi.ch
 
 [daq]
-rmsf-daq-[1:15].psi.ch
+rmsf-daq-3.psi.ch
+rmsf-daq-[5:6].psi.ch
+rmsf-daq-[7:9].psi.ch
+rmsf-daq-1[0:3].psi.ch
 
 [daqsync]
 rmsf-daqsync-0[1:9].psi.ch
@@ -16,9 +19,15 @@ rmsf-export-[12:13].psi.ch
 rmsf-export-2.psi.ch
 rmsf-export-11.psi.ch
 
+[test]
+rmsf-srvtest-01.psi.ch
+rmsf-srvtest-02.psi.ch
+rmsf-srvtest-03.psi.ch
+
 [swissfel:children]
 compute
 daq
 daqsync
 afm
 nfs
+test
