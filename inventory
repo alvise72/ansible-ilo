@@ -2,6 +2,7 @@
 rmsf-cn-[1:20].psi.ch
 
 [daq]
+rmsf-daq-1.psi.ch
 rmsf-daq-3.psi.ch
 rmsf-daq-[5:6].psi.ch
 rmsf-daq-[7:9].psi.ch
