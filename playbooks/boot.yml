@@ -16,6 +16,11 @@
         'gen10': '/boot',
         'gen10p': '/oem/hpe/boot/settings/'
       }
+    - pathshowboot: {
+        'gen9':   '/redfish/v1/systems/1/bios/boot/settings/',
+        'gen10':  '/redfish/v1/systems/1/bios/boot/settings/',
+        'gen10p': '/redfish/v1/systems/1/bios/oem/hpe/boot/settings/'
+      }
     - gen: 'gen9'
 
   tasks:
@@ -67,7 +72,7 @@
     #
     - name: Gathering Bios Info
       uri:
-        url: 'https://{{ inventory_hostname }}{{baseapibios}}{{ url[gen] }}'
+        url: 'https://{{ inventory_hostname }}{{pathshowboot[gen]}}'
         method: GET
         return_content: yes
         url_username: '{{ username }}'
