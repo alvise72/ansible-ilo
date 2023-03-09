@@ -21,6 +21,11 @@
         'gen10':  '/redfish/v1/systems/1/bios/boot/settings/',
         'gen10p': '/redfish/v1/systems/1/bios/oem/hpe/boot/settings/'
       }
+    - pathpatchboot: {
+        'gen9':   '/redfish/v1/systems/1/bios/boot/settings/',
+        'gen10':  '/redfish/v1/systems/1/bios/boot/settings/',
+        'gen10p': '/redfish/v1/systems/1/bios/oem/hpe/boot/settings/'
+      }
     - gen: 'gen9'
 
   tasks:
@@ -97,56 +102,6 @@
     #
     # If not only-show is selected, then proceed with boot order change
     #
-
-    #- name: Init array_boot_devices (Gen10/Gen10+)
-    #  set_fact: 
-    #    array_boot_devices: []
-    #  no_log: '{{ nolog }}'
-    #  when: gen == 'gen10' or gen == 'gen10p'
-
-    #- name: Gather boot device IDs (Gen10/Gen10+)
-    #  set_fact:
-    #    array_boot_devices: '{{ array_boot_devices + [ ( item | to_json(ensure_ascii=False) | split(": "))[1][2:-3]]  }}'
-    #  loop: '{{ query.json.Members }}'
-    #  loop_control:
-    #    label: ""
-    #  no_log: '{{ nolog }}'
-    #  when: gen == 'gen10' or gen == 'gen10p'
-
-    #- name: Gather boot device names (Gen10/Gen10+)
-    #  uri:
-    #    url: 'https://{{ inventory_hostname }}/{{item}}'
-    #    method: GET
-    #    return_content: yes
-    #    url_username: '{{ username }}'
-    #    url_password: '{{ password }}'
-    #    validate_certs: false
-    #    status_code: 200
-    #    use_proxy: false
-    #    force_basic_auth: true
-    #  register: querybootdev
-    #  delegate_to: localhost
-    #  no_log: '{{nolog}}'
-    #  changed_when: false
-    #  loop: '{{ array_boot_devices }}'
-    #  loop_control:
-    #    label: ""
-    #  when: gen == 'gen10' or gen == 'gen10p'
-
-    #- set_fact:
-    #    bootdevs: []
-    #  no_log: '{{nolog}}'
-    #  when: gen == 'gen10' or gen == 'gen10p'
-
-    #- name: Collecting all boot devices (Gen10/Gen10+)
-    #  set_fact:
-    #    bootdevs: '{{ bootdevs + [item.json.DisplayName] }}'
-    #  loop: '{{ querybootdev.results }}'
-    #  loop_control:
-    #    label: ""
-    #  no_log: '{{nolog}}'
-    #  when: gen == 'gen10' or gen == 'gen10p'
-
     - set_fact:
         otherdevs: []
         nicdevs: []
@@ -191,7 +146,7 @@
 
     - name: Patch BIOS/Boot/settings - PersistentBootConfigOrder
       uri:
-        url: 'https://{{ inventory_hostname }}{{ urlpatch[gen] }}'
+        url: 'https://{{ inventory_hostname }}{{ pathpatchboot[gen] }}'
         method: PATCH
         return_content: yes
         url_username: '{{ username }}'
