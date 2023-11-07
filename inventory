@@ -33,6 +33,9 @@ rmsf-srvtest-01.psi.ch
 rmsf-srvtest-02.psi.ch
 rmsf-srvtest-03.psi.ch
 
+[service]
+rmsf-srvservice-01.psi.ch
+
 [swissfel:children]
 compute
 daq
