@@ -1,5 +1,4 @@
 [compute]
-rmsf-cn-[1:22].psi.ch
 
 [daq]
 rmsf-daq-[1:3].psi.ch
