@@ -3,7 +3,8 @@ rmsf-cn-[1:24].psi.ch
 
 =======
 [daq]
-rmsf-daq-[1,4].psi.ch
+rmsf-daq-1.psi.ch
+rmsf-daq-4.psi.ch
 rmsf-daq-[7:9].psi.ch
 rmsf-daq-1[0:3].psi.ch
 
