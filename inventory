@@ -1,5 +1,6 @@
 [compute]
 rmsf-cn-[1:24].psi.ch
+rmsf-cn-gputest-1.psi.ch
 
 =======
 [daq]
