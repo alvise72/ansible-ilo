@@ -34,11 +34,10 @@ nfs
 
 [test]
 rmsf-srvtest-01.psi.ch
-rmsf-srvtest-02.psi.ch
-#rmsf-srvtest-03.psi.ch
 
 [service]
 rmsf-srvservice-01.psi.ch
+rmsf-srvservice-02.psi.ch
 rmsf-ipoib-1.psi.ch
 
 [swissfel:children]
